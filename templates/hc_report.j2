@@ -89,11 +89,6 @@ body {
     font-weight: bold;
 }
 
-.warn-text {
-    color: #d97706;
-    font-weight: bold;
-}
-
 .main-tabs-wrapper {
     margin: 0 30px;
     border: 3px solid #214f9c;
@@ -349,10 +344,6 @@ body {
     font-size: 14px;
 }
 
-.hidden-by-error-filter {
-    display: none !important;
-}
-
 .footer {
     text-align: center;
     color: #6b7280;
@@ -402,46 +393,92 @@ body {
 <script>
 function openTab(tabId) {
     var panels = document.getElementsByClassName("tab-panel");
+
     for (var i = 0; i < panels.length; i++) {
         panels[i].classList.remove("active");
     }
 
     var buttons = document.getElementsByClassName("tab-button");
+
     for (var j = 0; j < buttons.length; j++) {
         buttons[j].classList.remove("active");
     }
 
-    document.getElementById(tabId).classList.add("active");
-    document.getElementById("btn-" + tabId).classList.add("active");
+    var selectedPanel = document.getElementById(tabId);
+    var selectedButton = document.getElementById("btn-" + tabId);
+
+    if (selectedPanel) {
+        selectedPanel.classList.add("active");
+    }
+
+    if (selectedButton) {
+        selectedButton.classList.add("active");
+    }
 }
 
 function showErrorsOnly() {
+    var firstErrorButton = null;
     var panels = document.getElementsByClassName("tab-panel");
+
     for (var i = 0; i < panels.length; i++) {
-        var errorCount = parseInt(panels[i].getAttribute("data-error-count"));
-        if (errorCount === 0) {
-            panels[i].classList.add("hidden-by-error-filter");
+        var errorCount = parseInt(panels[i].getAttribute("data-error-count") || "0");
+        var tabId = panels[i].id;
+        var button = document.getElementById("btn-" + tabId);
+
+        panels[i].classList.remove("active");
+
+        if (errorCount > 0) {
+            if (button) {
+                button.style.display = "";
+            }
+
+            if (firstErrorButton === null) {
+                firstErrorButton = button;
+            }
         } else {
-            panels[i].classList.remove("hidden-by-error-filter");
+            if (button) {
+                button.style.display = "none";
+            }
         }
+    }
+
+    if (firstErrorButton) {
+        firstErrorButton.click();
     }
 }
 
 function showAll() {
     var panels = document.getElementsByClassName("tab-panel");
+
     for (var i = 0; i < panels.length; i++) {
-        panels[i].classList.remove("hidden-by-error-filter");
+        var tabId = panels[i].id;
+        var button = document.getElementById("btn-" + tabId);
+
+        panels[i].classList.remove("active");
+
+        if (button) {
+            button.style.display = "";
+            button.classList.remove("active");
+        }
+    }
+
+    var firstButton = document.querySelector(".tab-button");
+
+    if (firstButton) {
+        firstButton.click();
     }
 }
 
 function searchCurrentTab() {
     var activePanel = document.querySelector(".tab-panel.active");
+
     if (!activePanel) {
         return;
     }
 
     var input = activePanel.querySelector(".search-input");
     var output = activePanel.querySelector(".output-box");
+
     if (!input || !output) {
         return;
     }
@@ -473,6 +510,7 @@ function searchCurrentTab() {
 
 window.onload = function() {
     var firstButton = document.querySelector(".tab-button");
+
     if (firstButton) {
         firstButton.click();
     }
@@ -484,7 +522,6 @@ window.onload = function() {
 <body>
 
 {% set total_checks = ontap_results.results | length %}
-
 {% set total_error_ns = namespace(count=0) %}
 
 {% for result in ontap_results.results %}
@@ -583,8 +620,14 @@ window.onload = function() {
                 <span class="big-error-badge">{{ failed_checks }}</span>
             {% endif %}
         </div>
-        <div class="main-tab">Package Validation</div>
-        <div class="main-tab">SSH Command Output</div>
+
+        <div class="main-tab">
+            Package Validation
+        </div>
+
+        <div class="main-tab">
+            SSH Command Output
+        </div>
     </div>
 </div>
 
@@ -593,7 +636,6 @@ window.onload = function() {
 
         {% for result in ontap_results.results %}
             {% set tab_id = result.item.tab | replace(' ', '_') | replace('/', '_') %}
-
             {% set tab_error_ns = namespace(count=0, popup='') %}
 
             {% if result.rc != 0 %}
@@ -671,7 +713,6 @@ window.onload = function() {
 
 {% for result in ontap_results.results %}
     {% set tab_id = result.item.tab | replace(' ', '_') | replace('/', '_') %}
-
     {% set tab_error_ns = namespace(count=0) %}
 
     {% if result.rc != 0 %}
