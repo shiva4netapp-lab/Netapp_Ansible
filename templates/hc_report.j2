@@ -1,1 +1,163 @@
+<!DOCTYPE html>
+<html>
 
+<head>
+
+<title>NetApp Health Check Report</title>
+
+<style>
+
+{% include 'css/style.css' %}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+https://www.netapp.com/media/logo.svg">
+
+<div class="title">
+
+<h1>NetApp ONTAP Upgrade Report</h1>
+
+Cluster: {{ cluster_name }}
+
+—
+
+Type: {{ report_type }}
+
+—
+
+Timestamp: {{ report_time }}
+
+</div>
+
+<button onclick="showErrorsOnly()">
+Show Errors Only
+</button>
+
+</div>
+
+<div class="main-tabs">
+
+<div class="primary">
+ONTAP Cluster Checks
+<span class="badge">39</span>
+</div>
+
+<div>
+Package Validation
+</div>
+
+<div>
+SSH Command Output
+</div>
+
+</div>
+
+<div class="category">
+
+<div>
+Cluster
+<span class="badge">{{ cluster_errors }}</span>
+</div>
+
+<div>
+Node
+<span class="badge">{{ node_errors }}</span>
+</div>
+
+<div>SVM</div>
+
+<div>Volume</div>
+
+<div>LUN</div>
+
+<div>Services</div>
+
+<div>SnapMirror</div>
+
+<div>
+Network
+<span class="badge">{{ network_errors }}</span>
+</div>
+
+<div>System</div>
+
+<div>Security</div>
+
+<div>MetroCluster</div>
+
+</div>
+
+<div class="section-title">
+
+Cluster
+
+</div>
+
+<div style="padding:20px;">
+
+<h1>Cluster</h1>
+
+<div class="status">
+
+Status: Info
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Error Criteria</h2>
+
+<p>
+health equals False
+<br>
+eligibility equals False
+</p>
+
+</div>
+
+<table>
+
+<tr>
+
+<th>Node</th>
+<th>Health</th>
+<th>Eligibility</th>
+<th>Epsilon</th>
+<th>Ontap Version</th>
+<th>Cluster Epsilon Count</th>
+
+</tr>
+
+{% for node in nodes %}
+
+<tr>
+
+<td>{{ node.name }}</td>
+<td>{{ node.health }}</td>
+<td>{{ node.eligibility }}</td>
+<td>{{ node.epsilon }}</td>
+<td>{{ node.version }}</td>
+<td>NA</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+<script>
+
+{% include 'js/report.js' %}
+
+</script>
+
+</body>
+</html>
