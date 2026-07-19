@@ -4,37 +4,63 @@
   gather_facts: true
 
   vars:
+    report_file: "../reports/{{ hostname }}_HC_Report.html"
 
-    cluster_name: "{{ hostname }}"
-    report_type: "HEALTH CHECK"
-
-    cluster_errors: 2
-    node_errors: 2
-    network_errors: 3
-
-    nodes:
-      - name: node01
-        health: true
-        eligibility: true
-        epsilon: NA
-        version: 9.15.1P14
-
-      - name: node02
-        health: true
-        eligibility: true
-        epsilon: NA
-        version: 9.15.1P14
+    ontap_commands:
+      - tab: "Cluster"
+        command: "cluster show"
+      - tab: "Node"
+        command: "system node show"
+      - tab: "SVM"
+        command: "vserver show"
+      - tab: "Volume"
+        command: "volume show"
+      - tab: "LUN"
+        command: "lun show"
+      - tab: "Services"
+        command: "vserver services name-service dns show"
+      - tab: "SnapMirror"
+        command: "snapmirror show"
+      - tab: "Network"
+        command: "network interface show"
+      - tab: "System"
+        command: "system health status show"
+      - tab: "Security"
+        command: "security config show"
+      - tab: "MetroCluster"
+        command: "metrocluster show"
+      - tab: "Package Validation"
+        command: "cluster image package show"
+      - tab: "SSH Command Output"
+        command: "version"
 
   tasks:
 
-    - name: Generate Report
-      template:
-        src: ../templates/hc_report.j2
-        dest: ../reports/{{ hostname }}_HC_Report.html
+    - name: Ensure reports directory exists
+      file:
+        path: "../reports"
+        state: directory
+        mode: "0755"
 
+    - name: Run ONTAP commands over SSH
+      shell: >
+        sshpass -p '{{ password }}'
+        ssh -o StrictHostKeyChecking=no
+        -o UserKnownHostsFile=/dev/null
+        {{ username }}@{{ hostname }}
+        "{{ item.command }}"
+      loop: "{{ ontap_commands }}"
+      register: ontap_results
+      ignore_errors: true
+      no_log: false
+
+    - name: Generate Web HTML Health Check Report
+      template:
+        src: "../templates/hc_report.j2"
+        dest: "{{ report_file }}"
       vars:
-        report_time: "{{ ansible_date_time.date }} {{ ansible_date_time.time }}"
+        report_time: "{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}"
 
     - name: Report Location
       debug:
-        msg: "../reports/{{ hostname }}_HC_Report.html"
+        msg: "{{ report_file }}"
