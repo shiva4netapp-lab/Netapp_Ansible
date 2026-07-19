@@ -1,1 +1,96 @@
+body{
+    font-family: Arial;
+    margin:0;
+    background:#f5f7fa;
+}
 
+.header{
+    display:flex;
+    align-items:center;
+    background:white;
+    padding:20px;
+}
+
+.logo{
+    width:300px;
+}
+
+.title{
+    flex:1;
+    text-align:center;
+    font-size:22px;
+    color:#34495e;
+}
+
+.main-tabs{
+    display:flex;
+    border:2px solid #214f9c;
+    margin:10px;
+}
+
+.main-tabs div{
+    padding:20px;
+}
+
+.primary{
+    background:#214f9c;
+    color:white;
+}
+
+.badge{
+    background:red;
+    border-radius:20px;
+    color:white;
+    padding:4px 10px;
+}
+
+.category{
+    display:flex;
+    background:#2e435a;
+}
+
+.category div{
+    color:white;
+    padding:18px;
+}
+
+.section-title{
+    text-align:center;
+    font-size:40px;
+    background:#8fd2ee;
+    padding:20px;
+    color:#214f9c;
+}
+
+.status{
+    background:#28a745;
+    color:white;
+    display:inline-block;
+    padding:15px;
+    border-radius:5px;
+    margin-top:10px;
+    font-size:20px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:20px;
+}
+
+th{
+    background:#214f9c;
+    color:white;
+    padding:15px;
+}
+
+td{
+    padding:15px;
+    border-bottom:1px solid #ddd;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    margin-top:20px;
+}
