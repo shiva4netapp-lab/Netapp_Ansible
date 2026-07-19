@@ -4,63 +4,129 @@
   gather_facts: true
 
   vars:
-    report_file: "../reports/{{ hostname }}_HC_Report.html"
+    report_dir: "{{ playbook_dir }}/../reports"
+    report_file: "{{ report_dir }}/{{ hostname }}_HC_Report.html"
 
     ontap_commands:
       - tab: "Cluster"
+        category: "Core"
         command: "cluster show"
+        error_criteria:
+          - "Health should be true"
+          - "Eligibility should be true"
+
       - tab: "Node"
+        category: "Core"
         command: "system node show"
+        error_criteria:
+          - "Node health should be true"
+          - "Node eligibility should be true"
+
       - tab: "SVM"
+        category: "Storage"
         command: "vserver show"
+        error_criteria:
+          - "SVM should be in expected operational state"
+
       - tab: "Volume"
+        category: "Storage"
         command: "volume show"
+        error_criteria:
+          - "Volume state should be online"
+          - "Used percentage should be reviewed if high"
+
       - tab: "LUN"
+        category: "SAN"
         command: "lun show"
+        error_criteria:
+          - "LUN table should be reviewed if expected LUNs are missing"
+
       - tab: "Services"
+        category: "Services"
         command: "vserver services name-service dns show"
+        error_criteria:
+          - "DNS servers should be reachable"
+          - "Configured domains should be correct"
+
       - tab: "SnapMirror"
+        category: "Protection"
         command: "snapmirror show"
+        error_criteria:
+          - "Relationship health should be true"
+          - "Lag should be within accepted limit"
+
       - tab: "Network"
+        category: "Network"
         command: "network interface show"
+        error_criteria:
+          - "LIF admin/oper status should be up/up"
+          - "LIF should be on expected home port"
+
       - tab: "System"
+        category: "System"
         command: "system health status show"
+        error_criteria:
+          - "System health status should be ok"
+
       - tab: "Security"
-        command: "security config show"
+        category: "Security"
+        command: "security login show"
+        error_criteria:
+          - "Admin users should be validated"
+          - "Authentication methods should be reviewed"
+
       - tab: "MetroCluster"
+        category: "DR"
         command: "metrocluster show"
+        error_criteria:
+          - "MetroCluster should be configured only if expected"
+          - "Configuration state should be reviewed"
+
       - tab: "Package Validation"
+        category: "Upgrade"
         command: "cluster image package show"
+        error_criteria:
+          - "Expected upgrade package should be available"
+
       - tab: "SSH Command Output"
+        category: "Version"
         command: "version"
+        error_criteria:
+          - "ONTAP version should match expected release"
 
   tasks:
 
     - name: Ensure reports directory exists
-      file:
-        path: "../reports"
+      ansible.builtin.file:
+        path: "{{ report_dir }}"
         state: directory
         mode: "0755"
 
     - name: Run ONTAP commands over SSH
-      shell: >
-        sshpass -p '{{ password }}'
-        ssh -o StrictHostKeyChecking=no
+      ansible.builtin.shell: >
+        sshpass -e
+        ssh
+        -o StrictHostKeyChecking=no
         -o UserKnownHostsFile=/dev/null
+        -o LogLevel=ERROR
         {{ username }}@{{ hostname }}
         "{{ item.command }}"
+      environment:
+        SSHPASS: "{{ password }}"
       loop: "{{ ontap_commands }}"
       register: ontap_results
       ignore_errors: true
+      changed_when: true
       no_log: false
 
-    - name: Generate Web HTML Health Check Report
-      template:
-        src: "../templates/hc_report.j2"
+    - name: Generate Web Style HTML Health Check Report
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../templates/hc_report.j2"
         dest: "{{ report_file }}"
+        mode: "0644"
       vars:
         report_time: "{{ ansible_facts.date_time.date }} {{ ansible_facts.date_time.time }}"
 
     - name: Report Location
-      debug:
+      ansible.builtin.debug:
         msg: "{{ report_file }}"
