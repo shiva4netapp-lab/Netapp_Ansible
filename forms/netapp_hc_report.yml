@@ -1,5 +1,5 @@
 - name: netapp_hc_report
-  description: Generate NetApp ONTAP Health Check Report
+  description: Generate NetApp ONTAP Web Style Health Check Report
   type: ansible
 
   categories:
@@ -9,7 +9,6 @@
     - public
 
   playbook: playbooks/netapp_hc_report.yml
-
   inventory: ""
 
   fields:
@@ -17,6 +16,7 @@
       label: Cluster Management IP
       type: text
       required: true
+      placeholder: 192.168.226.20
 
     - name: username
       label: Username
