@@ -94,6 +94,118 @@ body {
     height: 26px;
 }
 
+/* GLOBAL SEARCH */
+.global-search-panel {
+    background: #ffffff;
+    margin: 25px 30px;
+    padding: 24px;
+    border-radius: 10px;
+    border-left: 7px solid #214f9c;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.global-search-panel h2 {
+    margin-top: 0;
+    color: #214f9c;
+    font-size: 28px;
+}
+
+.global-search-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.global-search-row input {
+    width: 650px;
+    max-width: 100%;
+    padding: 14px;
+    border: 2px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 17px;
+}
+
+.global-search-row button {
+    background: #0067b1;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    padding: 14px 22px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.global-search-row button:hover {
+    background: #004f87;
+}
+
+.quick-search-buttons {
+    margin-top: 15px;
+}
+
+.quick-search-buttons button {
+    background: #26384f;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 9px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.quick-search-buttons button:hover {
+    background: #00a3e0;
+}
+
+.global-search-results {
+    margin-top: 22px;
+}
+
+.global-search-summary {
+    background: #eef6ff;
+    border-left: 5px solid #00a3e0;
+    padding: 14px;
+    border-radius: 6px;
+    margin-bottom: 18px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.search-result-card {
+    background: #fffdf2;
+    border: 2px solid #f59e0b;
+    border-left: 7px solid #f59e0b;
+    border-radius: 8px;
+    margin-bottom: 18px;
+    padding: 18px;
+}
+
+.search-result-card h3 {
+    margin: 0 0 10px 0;
+    color: #92400e;
+    font-size: 22px;
+}
+
+.search-result-card pre {
+    background: #111827;
+    color: #d1fae5;
+    padding: 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    font-family: Consolas, monospace;
+    font-size: 14px;
+}
+
+.search-highlight {
+    background: yellow;
+    color: black;
+    font-weight: bold;
+}
+
 /* SUMMARY */
 .summary {
     display: grid;
@@ -459,7 +571,8 @@ body {
     .header-buttons,
     .main-tabs-wrapper,
     .tabs-wrapper,
-    .search-box {
+    .search-box,
+    .global-search-panel {
         display: none;
     }
 
@@ -478,11 +591,13 @@ body {
 <script>
 function openMainTab(mainId) {
     var panels = document.getElementsByClassName("main-panel");
+
     for (var i = 0; i < panels.length; i++) {
         panels[i].classList.remove("active");
     }
 
     var mainTabs = document.getElementsByClassName("main-tab");
+
     for (var j = 0; j < mainTabs.length; j++) {
         mainTabs[j].classList.remove("active");
     }
@@ -500,6 +615,7 @@ function openMainTab(mainId) {
 
     if (mainId === "cluster_checks_panel") {
         var firstVisibleButton = document.querySelector(".tab-button:not(.hide-item)");
+
         if (firstVisibleButton) {
             firstVisibleButton.click();
         }
@@ -508,11 +624,13 @@ function openMainTab(mainId) {
 
 function openTab(tabId) {
     var panels = document.getElementsByClassName("tab-panel");
+
     for (var i = 0; i < panels.length; i++) {
         panels[i].classList.remove("active");
     }
 
     var buttons = document.getElementsByClassName("tab-button");
+
     for (var j = 0; j < buttons.length; j++) {
         buttons[j].classList.remove("active");
     }
@@ -531,6 +649,7 @@ function openTab(tabId) {
 
 function showErrorsOnly() {
     var checkbox = document.getElementById("errorCheckBox");
+
     if (checkbox) {
         checkbox.checked = true;
     }
@@ -584,6 +703,7 @@ function showErrorsOnly() {
 
 function showAll() {
     var checkbox = document.getElementById("errorCheckBox");
+
     if (checkbox) {
         checkbox.checked = false;
     }
@@ -666,11 +786,145 @@ function searchCurrentTab() {
     output.innerText = matched.join("\n");
 }
 
+/* GLOBAL SEARCH FUNCTIONS */
+function escapeSearchHtml(value) {
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
+
+function highlightGlobalSearchMatch(line, keyword) {
+    var safeLine = escapeSearchHtml(line);
+
+    if (!keyword) {
+        return safeLine;
+    }
+
+    var escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var regex = new RegExp("(" + escapedKeyword + ")", "gi");
+
+    return safeLine.replace(
+        regex,
+        '<span class="search-highlight">$1</span>'
+    );
+}
+
+function setGlobalSearch(value) {
+    var input = document.getElementById("globalSearchInput");
+
+    if (input) {
+        input.value = value;
+        globalSearchAllCommands();
+    }
+}
+
+function clearGlobalSearch() {
+    var input = document.getElementById("globalSearchInput");
+    var results = document.getElementById("globalSearchResults");
+
+    if (input) {
+        input.value = "";
+    }
+
+    if (results) {
+        results.innerHTML = "";
+    }
+}
+
+function globalSearchAllCommands() {
+    var input = document.getElementById("globalSearchInput");
+    var results = document.getElementById("globalSearchResults");
+
+    if (!input || !results) {
+        return;
+    }
+
+    var keyword = input.value.trim();
+    var searchText = keyword.toLowerCase();
+
+    results.innerHTML = "";
+
+    if (searchText.length === 0) {
+        results.innerHTML =
+            '<div class="global-search-summary">Enter text to search across all command outputs.</div>';
+        return;
+    }
+
+    var commandHeaders = document.querySelectorAll(".command-header");
+    var totalCommandMatches = 0;
+    var totalLineMatches = 0;
+    var renderedKeys = {};
+
+    for (var i = 0; i < commandHeaders.length; i++) {
+        var commandHeader = commandHeaders[i];
+        var commandName = commandHeader.innerText.trim();
+        var outputBox = commandHeader.nextElementSibling;
+
+        if (!outputBox || !outputBox.classList.contains("output-box")) {
+            continue;
+        }
+
+        var outputText = outputBox.innerText || "";
+        var lines = outputText.split("\n");
+        var matchedLines = [];
+
+        for (var j = 0; j < lines.length; j++) {
+            if (lines[j].toLowerCase().indexOf(searchText) !== -1) {
+                matchedLines.push(lines[j]);
+            }
+        }
+
+        if (matchedLines.length > 0) {
+            var uniqueKey = commandName + "::" + matchedLines.join("|");
+
+            if (renderedKeys[uniqueKey]) {
+                continue;
+            }
+
+            renderedKeys[uniqueKey] = true;
+
+            totalCommandMatches++;
+            totalLineMatches += matchedLines.length;
+
+            var highlightedLines = [];
+
+            for (var k = 0; k < matchedLines.length; k++) {
+                highlightedLines.push(
+                    highlightGlobalSearchMatch(matchedLines[k], keyword)
+                );
+            }
+
+            results.innerHTML +=
+                '<div class="search-result-card">' +
+                '<h3>' + escapeSearchHtml(commandName) + '</h3>' +
+                '<pre>' + highlightedLines.join("\n") + '</pre>' +
+                '</div>';
+        }
+    }
+
+    if (totalCommandMatches === 0) {
+        results.innerHTML =
+            '<div class="global-search-summary">No results found for: <b>' +
+            escapeSearchHtml(keyword) +
+            '</b></div>';
+    } else {
+        results.innerHTML =
+            '<div class="global-search-summary">Search Results for "<b>' +
+            escapeSearchHtml(keyword) +
+            '</b>" - Found in ' +
+            totalCommandMatches +
+            ' command(s), ' +
+            totalLineMatches +
+            ' matching line(s)</div>' +
+            results.innerHTML;
+    }
+}
+
 window.onload = function() {
     openMainTab("cluster_checks_panel");
 }
 </script>
-
 </head>
 
 <body>
@@ -735,7 +989,7 @@ window.onload = function() {
         <div class="report-title">
             <h1>NetApp ONTAP Health Check Report</h1>
             <p>
-                Cluster: {{ hostname }} — Type: HEALTH CHECK — Timestamp: {{ report_time }}
+                Cluster: {{ hostname }} -- Type: HEALTH CHECK -- Timestamp: {{ report_time }}
             </p>
         </div>
     </div>
@@ -747,9 +1001,37 @@ window.onload = function() {
 
         <label class="error-toggle">
             <input id="errorCheckBox" type="checkbox" onclick="toggleErrorsOnly()">
-            🔍 Show errors only
+            Show errors only
         </label>
     </div>
+</div>
+
+<div class="global-search-panel">
+    <h2>Global Search Criteria</h2>
+
+    <div class="global-search-row">
+        <input
+            id="globalSearchInput"
+            type="text"
+            placeholder="Search across all command outputs. Example: Cluster01, 93%, offline, false, error"
+            onkeyup="if(event.key === 'Enter'){ globalSearchAllCommands(); }">
+
+        <button onclick="globalSearchAllCommands()">Search All Commands</button>
+        <button onclick="clearGlobalSearch()">Clear</button>
+    </div>
+
+    <div class="quick-search-buttons">
+        <button onclick="setGlobalSearch('error')">Error</button>
+        <button onclick="setGlobalSearch('failed')">Failed</button>
+        <button onclick="setGlobalSearch('false')">False</button>
+        <button onclick="setGlobalSearch('offline')">Offline</button>
+        <button onclick="setGlobalSearch('down')">Down</button>
+        <button onclick="setGlobalSearch('not-configured')">Not Configured</button>
+        <button onclick="setGlobalSearch('93%')">93%</button>
+        <button onclick="setGlobalSearch('Cluster01')">Cluster01</button>
+    </div>
+
+    <div id="globalSearchResults" class="global-search-results"></div>
 </div>
 
 <div class="summary">
