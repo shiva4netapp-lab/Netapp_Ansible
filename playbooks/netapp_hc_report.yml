@@ -1,1 +1,40 @@
+---
+- name: NetApp Health Check Report
+  hosts: localhost
+  gather_facts: true
 
+  vars:
+
+    cluster_name: "{{ hostname }}"
+    report_type: "HEALTH CHECK"
+
+    cluster_errors: 2
+    node_errors: 2
+    network_errors: 3
+
+    nodes:
+      - name: node01
+        health: true
+        eligibility: true
+        epsilon: NA
+        version: 9.15.1P14
+
+      - name: node02
+        health: true
+        eligibility: true
+        epsilon: NA
+        version: 9.15.1P14
+
+  tasks:
+
+    - name: Generate Report
+      template:
+        src: ../templates/hc_report.j2
+        dest: ../reports/{{ hostname }}_HC_Report.html
+
+      vars:
+        report_time: "{{ ansible_date_time.date }} {{ ansible_date_time.time }}"
+
+    - name: Report Location
+      debug:
+        msg: "../reports/{{ hostname }}_HC_Report.html"
