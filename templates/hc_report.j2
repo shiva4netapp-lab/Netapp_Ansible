@@ -17,7 +17,7 @@ body {
 
 .header {
     background: #ffffff;
-    padding: 30px;
+    padding: 24px 30px;
     border-bottom: 4px solid #0067b1;
     display: flex;
     align-items: center;
@@ -94,10 +94,37 @@ body {
     font-weight: bold;
 }
 
+.main-tabs-wrapper {
+    margin: 0 30px;
+    border: 3px solid #214f9c;
+    border-radius: 10px;
+    overflow-x: auto;
+    background: #eef3f8;
+}
+
+.main-tabs {
+    display: flex;
+    min-width: max-content;
+}
+
+.main-tab {
+    padding: 18px 25px;
+    color: #003b7a;
+    font-weight: bold;
+    position: relative;
+}
+
+.main-tab.active {
+    background: #214f9c;
+    color: white;
+}
+
 .tabs-wrapper {
+    margin: 16px 30px 0 30px;
     background: #26384f;
     overflow-x: auto;
     white-space: nowrap;
+    border-radius: 8px;
 }
 
 .tabs {
@@ -109,10 +136,12 @@ body {
     background: #26384f;
     color: white;
     border: none;
-    padding: 22px 32px;
+    padding: 20px 24px;
     cursor: pointer;
-    font-size: 17px;
+    font-size: 16px;
+    font-weight: bold;
     border-right: 1px solid rgba(255,255,255,0.08);
+    position: relative;
 }
 
 .tab-button:hover {
@@ -124,8 +153,65 @@ body {
     font-weight: bold;
 }
 
+.error-badge {
+    background: #ef3340;
+    color: white;
+    border-radius: 50%;
+    padding: 5px 9px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 6px;
+    display: inline-block;
+    min-width: 25px;
+    text-align: center;
+}
+
+.big-error-badge {
+    background: #ef3340;
+    color: white;
+    border-radius: 18px;
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    margin-left: 8px;
+}
+
+.error-popup {
+    display: none;
+    position: absolute;
+    top: 52px;
+    left: 10px;
+    background: white;
+    color: #1f2937;
+    border: 2px solid #ef3340;
+    border-radius: 8px;
+    min-width: 340px;
+    max-width: 520px;
+    padding: 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    z-index: 9999;
+    text-align: left;
+    font-size: 13px;
+    white-space: normal;
+}
+
+.tab-button:hover .error-popup {
+    display: block;
+}
+
+.popup-title {
+    color: #dc2626;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.popup-line {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 5px 0;
+}
+
 .content {
-    padding: 28px;
+    padding: 28px 30px;
 }
 
 .tab-panel {
@@ -181,6 +267,16 @@ body {
     background: #dc2626;
 }
 
+.status-info {
+    background: #22c55e;
+    color: white;
+    display: inline-block;
+    padding: 14px 20px;
+    border-radius: 6px;
+    font-size: 22px;
+    font-weight: bold;
+}
+
 .criteria {
     background: #f8fafc;
     border-left: 5px solid #0067b1;
@@ -212,7 +308,7 @@ body {
     min-height: 90px;
 }
 
-.error-box {
+.error-output-box {
     background: #3b0a0a;
     color: #fecaca;
     padding: 20px;
@@ -266,6 +362,7 @@ body {
 
 @media print {
     .header-buttons,
+    .main-tabs-wrapper,
     .tabs-wrapper,
     .search-box {
         display: none;
@@ -321,8 +418,8 @@ function openTab(tabId) {
 function showErrorsOnly() {
     var panels = document.getElementsByClassName("tab-panel");
     for (var i = 0; i < panels.length; i++) {
-        var status = panels[i].getAttribute("data-status");
-        if (status === "success") {
+        var errorCount = parseInt(panels[i].getAttribute("data-error-count"));
+        if (errorCount === 0) {
             panels[i].classList.add("hidden-by-error-filter");
         } else {
             panels[i].classList.remove("hidden-by-error-filter");
@@ -387,8 +484,57 @@ window.onload = function() {
 <body>
 
 {% set total_checks = ontap_results.results | length %}
-{% set success_checks = ontap_results.results | selectattr('rc', 'equalto', 0) | list | length %}
-{% set failed_checks = ontap_results.results | rejectattr('rc', 'equalto', 0) | list | length %}
+
+{% set total_error_ns = namespace(count=0) %}
+
+{% for result in ontap_results.results %}
+    {% set tab_error_ns = namespace(count=0) %}
+
+    {% if result.rc != 0 %}
+        {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+    {% endif %}
+
+    {% if result.stdout_lines is defined %}
+        {% for line in result.stdout_lines %}
+            {% set l = line | lower %}
+            {% if
+                'false' in l or
+                'fail' in l or
+                'failed' in l or
+                'error' in l or
+                'offline' in l or
+                'down' in l or
+                'degraded' in l or
+                'not-configured' in l or
+                'unknown' in l or
+                'unhealthy' in l
+            %}
+                {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if result.stderr_lines is defined %}
+        {% for line in result.stderr_lines %}
+            {% set l = line | lower %}
+            {% if
+                'error' in l or
+                'failed' in l or
+                'not recognized' in l or
+                'no route' in l or
+                'permission denied' in l or
+                'connection refused' in l
+            %}
+                {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% set total_error_ns.count = total_error_ns.count + tab_error_ns.count %}
+{% endfor %}
+
+{% set failed_checks = total_error_ns.count %}
+{% set success_checks = total_checks - (ontap_results.results | rejectattr('rc', 'equalto', 0) | list | length) %}
 
 <div class="header">
     <div class="header-left">
@@ -424,22 +570,100 @@ window.onload = function() {
     </div>
 
     <div class="summary-card">
-        <h2>Failed</h2>
+        <h2>Error Count</h2>
         <p class="fail-text">{{ failed_checks }}</p>
+    </div>
+</div>
+
+<div class="main-tabs-wrapper">
+    <div class="main-tabs">
+        <div class="main-tab active">
+            ONTAP Cluster Checks
+            {% if failed_checks > 0 %}
+                <span class="big-error-badge">{{ failed_checks }}</span>
+            {% endif %}
+        </div>
+        <div class="main-tab">Package Validation</div>
+        <div class="main-tab">SSH Command Output</div>
     </div>
 </div>
 
 <div class="tabs-wrapper">
     <div class="tabs">
+
         {% for result in ontap_results.results %}
             {% set tab_id = result.item.tab | replace(' ', '_') | replace('/', '_') %}
+
+            {% set tab_error_ns = namespace(count=0, popup='') %}
+
+            {% if result.rc != 0 %}
+                {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+                {% set tab_error_ns.popup = tab_error_ns.popup ~ 'Return code is ' ~ result.rc ~ '\n' %}
+            {% endif %}
+
+            {% if result.stdout_lines is defined %}
+                {% for line in result.stdout_lines %}
+                    {% set l = line | lower %}
+                    {% if
+                        'false' in l or
+                        'fail' in l or
+                        'failed' in l or
+                        'error' in l or
+                        'offline' in l or
+                        'down' in l or
+                        'degraded' in l or
+                        'not-configured' in l or
+                        'unknown' in l or
+                        'unhealthy' in l
+                    %}
+                        {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+                        {% set tab_error_ns.popup = tab_error_ns.popup ~ line ~ '\n' %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
+            {% if result.stderr_lines is defined %}
+                {% for line in result.stderr_lines %}
+                    {% set l = line | lower %}
+                    {% if
+                        'error' in l or
+                        'failed' in l or
+                        'not recognized' in l or
+                        'no route' in l or
+                        'permission denied' in l or
+                        'connection refused' in l
+                    %}
+                        {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+                        {% set tab_error_ns.popup = tab_error_ns.popup ~ line ~ '\n' %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+
             <button
                 id="btn-{{ tab_id }}"
                 class="tab-button"
                 onclick="openTab('{{ tab_id }}')">
+
                 {{ result.item.tab }}
+
+                {% if tab_error_ns.count > 0 %}
+                    <span class="error-badge">{{ tab_error_ns.count }}</span>
+
+                    <div class="error-popup">
+                        <div class="popup-title">
+                            {{ result.item.tab }} - {{ tab_error_ns.count }} issue(s)
+                        </div>
+
+                        {% for popup_line in tab_error_ns.popup.split('\n') %}
+                            {% if popup_line | length > 0 %}
+                                <div class="popup-line">{{ popup_line }}</div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </button>
         {% endfor %}
+
     </div>
 </div>
 
@@ -448,39 +672,73 @@ window.onload = function() {
 {% for result in ontap_results.results %}
     {% set tab_id = result.item.tab | replace(' ', '_') | replace('/', '_') %}
 
+    {% set tab_error_ns = namespace(count=0) %}
+
+    {% if result.rc != 0 %}
+        {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+    {% endif %}
+
+    {% if result.stdout_lines is defined %}
+        {% for line in result.stdout_lines %}
+            {% set l = line | lower %}
+            {% if
+                'false' in l or
+                'fail' in l or
+                'failed' in l or
+                'error' in l or
+                'offline' in l or
+                'down' in l or
+                'degraded' in l or
+                'not-configured' in l or
+                'unknown' in l or
+                'unhealthy' in l
+            %}
+                {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+    {% if result.stderr_lines is defined %}
+        {% for line in result.stderr_lines %}
+            {% set l = line | lower %}
+            {% if
+                'error' in l or
+                'failed' in l or
+                'not recognized' in l or
+                'no route' in l or
+                'permission denied' in l or
+                'connection refused' in l
+            %}
+                {% set tab_error_ns.count = tab_error_ns.count + 1 %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
     <div
         id="{{ tab_id }}"
         class="tab-panel"
-        data-status="{% if result.rc == 0 %}success{% else %}failed{% endif %}">
+        data-error-count="{{ tab_error_ns.count }}">
 
         <div class="section-title">
             {{ result.item.tab }}
         </div>
 
         <div class="card">
-            <h2>{{ result.item.tab }} Health Check</h2>
+            <h2>{{ result.item.tab }}</h2>
 
-            <table class="table-like">
-                <tr>
-                    <th>Check Category</th>
-                    <th>Command</th>
-                    <th>Status</th>
-                    <th>Return Code</th>
-                </tr>
-
-                <tr>
-                    <td>{{ result.item.category }}</td>
-                    <td>{{ result.item.command }}</td>
-                    <td>
-                        {% if result.rc == 0 %}
-                            <span class="status-badge status-success">SUCCESS</span>
-                        {% else %}
-                            <span class="status-badge status-warning">WARNING / REVIEW</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ result.rc }}</td>
-                </tr>
-            </table>
+            {% if tab_error_ns.count > 0 %}
+                <div class="status-info" style="background:#dc2626;">
+                    Status: Review Required - {{ tab_error_ns.count }} Issue(s)
+                </div>
+            {% elif result.rc == 0 %}
+                <div class="status-info">
+                    Status: Info
+                </div>
+            {% else %}
+                <div class="status-info" style="background:#d97706;">
+                    Status: Warning
+                </div>
+            {% endif %}
         </div>
 
         <div class="card">
@@ -493,6 +751,36 @@ window.onload = function() {
                     {% endfor %}
                 </ul>
             </div>
+        </div>
+
+        <div class="card">
+            <h2>Check Summary</h2>
+
+            <table class="table-like">
+                <tr>
+                    <th>Check Category</th>
+                    <th>Command</th>
+                    <th>Status</th>
+                    <th>Error Count</th>
+                    <th>Return Code</th>
+                </tr>
+
+                <tr>
+                    <td>{{ result.item.category }}</td>
+                    <td>{{ result.item.command }}</td>
+                    <td>
+                        {% if tab_error_ns.count > 0 %}
+                            <span class="status-badge status-failed">REVIEW</span>
+                        {% elif result.rc == 0 %}
+                            <span class="status-badge status-success">SUCCESS</span>
+                        {% else %}
+                            <span class="status-badge status-warning">WARNING</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ tab_error_ns.count }}</td>
+                    <td>{{ result.rc }}</td>
+                </tr>
+            </table>
         </div>
 
         <div class="card">
@@ -520,7 +808,7 @@ window.onload = function() {
         {% if result.stderr is defined and result.stderr | length > 0 %}
         <div class="card">
             <h2>SSH Warning / Error Output</h2>
-            <pre class="error-box">{{ result.stderr }}</pre>
+            <pre class="error-output-box">{{ result.stderr }}</pre>
         </div>
         {% endif %}
 
