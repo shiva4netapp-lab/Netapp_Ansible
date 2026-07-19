@@ -1,163 +1,301 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-
 <title>NetApp Health Check Report</title>
 
 <style>
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    background: #f4f7fb;
+    color: #1f2937;
+}
 
-{% include 'css/style.css' %}
+.header {
+    background: white;
+    padding: 20px;
+    border-bottom: 3px solid #0067b1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
 
+.header h1 {
+    margin: 0;
+    color: #0067b1;
+}
+
+.header-info {
+    font-size: 14px;
+    color: #4b5563;
+}
+
+.top-tabs {
+    display: flex;
+    background: #26384f;
+    overflow-x: auto;
+}
+
+.top-tabs button {
+    background: #26384f;
+    color: white;
+    border: none;
+    padding: 16px 22px;
+    cursor: pointer;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.top-tabs button:hover {
+    background: #0067b1;
+}
+
+.top-tabs button.active {
+    background: #00a3e0;
+    font-weight: bold;
+}
+
+.content {
+    padding: 20px;
+}
+
+.card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.summary {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.summary-card {
+    flex: 1;
+    min-width: 180px;
+    background: white;
+    padding: 20px;
+    border-left: 6px solid #00a3e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.summary-card h3 {
+    margin: 0;
+    color: #0067b1;
+}
+
+.badge-pass {
+    background: #16a34a;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+.badge-fail {
+    background: #dc2626;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+}
+
+pre {
+    background: #111827;
+    color: #d1fae5;
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    font-size: 14px;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.action-buttons {
+    margin-bottom: 15px;
+}
+
+.action-buttons button {
+    background: #0067b1;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    margin-right: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.action-buttons button:hover {
+    background: #004f87;
+}
+
+.error {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.success {
+    color: #16a34a;
+    font-weight: bold;
+}
 </style>
+
+<script>
+function openTab(tabName) {
+    var contents = document.getElementsByClassName("tab-content");
+    for (var i = 0; i < contents.length; i++) {
+        contents[i].classList.remove("active");
+    }
+
+    var buttons = document.getElementsByClassName("tab-button");
+    for (var j = 0; j < buttons.length; j++) {
+        buttons[j].classList.remove("active");
+    }
+
+    document.getElementById(tabName).classList.add("active");
+    document.getElementById("btn-" + tabName).classList.add("active");
+}
+
+function printReport() {
+    window.print();
+}
+
+function showErrorsOnly() {
+    var blocks = document.getElementsByClassName("command-block");
+    for (var i = 0; i < blocks.length; i++) {
+        var status = blocks[i].getAttribute("data-status");
+        if (status === "success") {
+            blocks[i].style.display = "none";
+        }
+    }
+}
+
+function showAll() {
+    var blocks = document.getElementsByClassName("command-block");
+    for (var i = 0; i < blocks.length; i++) {
+        blocks[i].style.display = "block";
+    }
+}
+</script>
 
 </head>
 
 <body>
 
 <div class="header">
+    <div>
+        <h1>NetApp ONTAP Health Check Report</h1>
+        <div class="header-info">
+            Cluster: {{ hostname }} |
+            Report Type: HEALTH CHECK |
+            Generated: {{ report_time }}
+        </div>
+    </div>
 
-https://www.netapp.com/media/logo.svg">
+    <div class="action-buttons">
+        <button onclick="printReport()">Print / Save PDF</button>
+        <button onclick="showErrorsOnly()">Show Errors Only</button>
+        <button onclick="showAll()">Show All</button>
+    </div>
+</div>
 
-<div class="title">
+<div class="content">
 
-<h1>NetApp ONTAP Upgrade Report</h1>
+    <div class="summary">
+        <div class="summary-card">
+            <h3>Cluster IP</h3>
+            <p>{{ hostname }}</p>
+        </div>
 
-Cluster: {{ cluster_name }}
+        <div class="summary-card">
+            <h3>Total Checks</h3>
+            <p>{{ ontap_results.results | length }}</p>
+        </div>
 
-—
+        <div class="summary-card">
+            <h3>Completed</h3>
+            <p class="success">
+                {{ ontap_results.results | selectattr('rc', 'equalto', 0) | list | length }}
+            </p>
+        </div>
 
-Type: {{ report_type }}
-
-—
-
-Timestamp: {{ report_time }}
+        <div class="summary-card">
+            <h3>Failed</h3>
+            <p class="error">
+                {{ ontap_results.results | rejectattr('rc', 'equalto', 0) | list | length }}
+            </p>
+        </div>
+    </div>
 
 </div>
 
-<button onclick="showErrorsOnly()">
-Show Errors Only
-</button>
-
+<div class="top-tabs">
+{% for result in ontap_results.results %}
+    {% set clean_tab = result.item.tab | replace(' ', '_') %}
+    <button
+        class="tab-button {% if loop.first %}active{% endif %}"
+        id="btn-{{ clean_tab }}"
+        onclick="openTab('{{ clean_tab }}')">
+        {{ result.item.tab }}
+    </button>
+{% endfor %}
 </div>
 
-<div class="main-tabs">
+<div class="content">
 
-<div class="primary">
-ONTAP Cluster Checks
-<span class="badge">39</span>
-</div>
+{% for result in ontap_results.results %}
+    {% set clean_tab = result.item.tab | replace(' ', '_') %}
 
-<div>
-Package Validation
-</div>
+    <div
+        id="{{ clean_tab }}"
+        class="tab-content {% if loop.first %}active{% endif %}">
 
-<div>
-SSH Command Output
-</div>
+        <div
+            class="card command-block"
+            data-status="{% if result.rc == 0 %}success{% else %}failed{% endif %}">
 
-</div>
+            <h2>{{ result.item.tab }}</h2>
 
-<div class="category">
+            <p>
+                <b>Command:</b>
+                <code>{{ result.item.command }}</code>
+            </p>
 
-<div>
-Cluster
-<span class="badge">{{ cluster_errors }}</span>
-</div>
+            <p>
+                <b>Status:</b>
+                {% if result.rc == 0 %}
+                    <span class="badge-pass">SUCCESS</span>
+                {% else %}
+                    <span class="badge-fail">FAILED</span>
+                {% endif %}
+            </p>
 
-<div>
-Node
-<span class="badge">{{ node_errors }}</span>
-</div>
+            <h3>Output</h3>
 
-<div>SVM</div>
+            {% if result.stdout is defined and result.stdout | length > 0 %}
+                <pre>{{ result.stdout }}</pre>
+            {% elif result.stderr is defined and result.stderr | length > 0 %}
+                <pre>{{ result.stderr }}</pre>
+            {% else %}
+                <pre>No output received.</pre>
+            {% endif %}
 
-<div>Volume</div>
+        </div>
 
-<div>LUN</div>
-
-<div>Services</div>
-
-<div>SnapMirror</div>
-
-<div>
-Network
-<span class="badge">{{ network_errors }}</span>
-</div>
-
-<div>System</div>
-
-<div>Security</div>
-
-<div>MetroCluster</div>
-
-</div>
-
-<div class="section-title">
-
-Cluster
-
-</div>
-
-<div style="padding:20px;">
-
-<h1>Cluster</h1>
-
-<div class="status">
-
-Status: Info
-
-</div>
-
-</div>
-
-<div class="card">
-
-<h2>Error Criteria</h2>
-
-<p>
-health equals False
-<br>
-eligibility equals False
-</p>
-
-</div>
-
-<table>
-
-<tr>
-
-<th>Node</th>
-<th>Health</th>
-<th>Eligibility</th>
-<th>Epsilon</th>
-<th>Ontap Version</th>
-<th>Cluster Epsilon Count</th>
-
-</tr>
-
-{% for node in nodes %}
-
-<tr>
-
-<td>{{ node.name }}</td>
-<td>{{ node.health }}</td>
-<td>{{ node.eligibility }}</td>
-<td>{{ node.epsilon }}</td>
-<td>{{ node.version }}</td>
-<td>NA</td>
-
-</tr>
+    </div>
 
 {% endfor %}
 
-</table>
-
-<script>
-
-{% include 'js/report.js' %}
-
-</script>
+</div>
 
 </body>
 </html>
