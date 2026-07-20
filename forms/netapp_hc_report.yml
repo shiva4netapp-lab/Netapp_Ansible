@@ -8,7 +8,7 @@
   roles:
     - public
 
-  playbook: playbooks/netapp_hc_report.yml
+  playbook: netapp_hc_report.yml
   inventory: ""
 
   fields:
