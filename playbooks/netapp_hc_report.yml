@@ -94,144 +94,6 @@
         error_criteria:
           - "ONTAP version should match expected release"
 
-    ssh_commands:
-      - "node show"
-      - "cluster image show"
-      - "cluster kernel-service show"
-      - "version -v"
-      - "version -b"
-      - "system health subsystem show"
-      - "system health alert show"
-      - "system health status show"
-      - "system health config show"
-      - "system controller fru show"
-      - "system controller environment show"
-      - "system chassis fru show"
-      - "system environment sensors show -state !normal"
-      - "system environment sensors show"
-      - "node run -node * -command sysconfig -a"
-      - "node run -node * -command sysconfig -V"
-      - "node run -node * -command sysconfig -c"
-      - "node run -node * -command storage show fault"
-      - "node run -node * -command sysstat -c 5 -x 3"
-      - "node run -node * -command ifstat -a"
-      - "storage dqp show"
-      - "disk show -container-type unknown,maintenance,broken,unsupported,unassigned"
-      - "disk show -state spare"
-      - "disk show -state reconstructing"
-      - "storage aggregate show-spare-disks"
-      - "disk show -fields model,disk,firmware-revision"
-      - "storage disk option show -fields bkg-firmware-update"
-      - "sp show"
-      - "sp image show -fields autoupdate"
-      - "storage shelf show"
-      - "storage shelf show -fields module-type,product-id,module-fw-revision"
-      - "storage shelf acp show"
-      - "storage shelf acp module show"
-      - "storage port show"
-      - "storage tape show"
-      - "cluster time-service ntp server show"
-      - "dns show"
-      - "vserver show"
-      - "aggr show"
-      - "aggr show -percent-used > 90"
-      - "aggr status -r"
-      - "aggr show -state !online"
-      - "storage aggregate show -fields encrypt-with-aggr-key"
-      - "cluster date show"
-      - "cluster ring show"
-      - "ha show"
-      - "storage failover show"
-      - "system license show"
-      - "vol show"
-      - "vol show -state !online"
-      - "vol show -is-encrypted true"
-      - "vol show -is-inconsistent true"
-      - "vol show -is-constituent true"
-      - "vol show -percent-used > 95"
-      - "df -i -vserver * -volume * -percent-inodes-used >90"
-      - "vol efficiency show"
-      - "vol efficiency policy show"
-      - "qtree show"
-      - "quota policy rule show"
-      - "quota report"
-      - "lun show"
-      - "lun show -m"
-      - "lun show -state !online"
-      - "lun show -mapped unmapped"
-      - "lun mapping show -fields reporting-nodes"
-      - "igroup show"
-      - "igroup show -instance"
-      - "iscsi show"
-      - "iscsi interface show"
-      - "iscsi connection show"
-      - "iscsi initiator show"
-      - "iscsi session show"
-      - "iscsi initiator show -fields igroup,initiator-name,tpgroup"
-      - "vserver fcp show"
-      - "vserver fcp topology show"
-      - "vserver fcp interface show"
-      - "vserver fcp initiator show"
-      - "ucadmin show"
-      - "fcp initiator show -fields igroup,wwpn,lif"
-      - "object-store show -instance"
-      - "object-store-server show"
-      - "object-store tiering show"
-      - "object-store show-space"
-      - "storage aggregate object-store config show"
-      - "security tpm show"
-      - "security certificate show -type server -fields expiration"
-      - "security key-manager config show"
-      - "security key-manager key query"
-      - "security key-manager key query -restored true"
-      - "security key-manager onboard show-backup"
-      - "security key-manager external show"
-      - "security key-manager external show-status"
-      - "security anti-ransomware volume show"
-      - "cifs show"
-      - "cifs share show"
-      - "cifs session show"
-      - "nfs show"
-      - "nfs connected-clients show"
-      - "export-policy show"
-      - "export-policy rule show"
-      - "network connections active show -service nfs"
-      - "vscan show"
-      - "vscan connection-status show"
-      - "cifs share show -fields vscan-fileop-profile"
-      - "fpolicy show"
-      - "fpolicy show-engine"
-      - "net int show"
-      - "net int show -is-home false"
-      - "net int show -status-oper down false"
-      - "net int show -status-admin down"
-      - "net port show"
-      - "net port show -link !up"
-      - "net int show -role cluster"
-      - "net port show -ipspace Cluster"
-      - "net port reachability show"
-      - "vlan show"
-      - "ifgrp show"
-      - "broadcast-domain show"
-      - "failover-groups show"
-      - "ha interconnect stat show"
-      - "ipspace show"
-      - "system cluster-switch show"
-      - "device-discovery show"
-      - "snapshot show"
-      - "cluster peer show"
-      - "vserver peer show"
-      - "snapmirror show"
-      - "snapmirror list-destinations"
-      - "system configuration backup show"
-      - "job show -state running"
-      - "job show"
-      - "event log show -severity EMERGENCY,CRITICAL,ERROR"
-      - "vserver services ndmp show"
-      - "vserver services ndmp status"
-      - "system services ndmp status"
-      - "system node autosupport show"
-
   tasks:
 
     - name: Ensure reports directory exists
@@ -240,7 +102,7 @@
         state: directory
         mode: "0755"
 
-    - name: Run ONTAP health check commands over SSH
+    - name: Run ONTAP commands over SSH
       ansible.builtin.shell: >
         sshpass -e
         ssh
@@ -254,24 +116,7 @@
       loop: "{{ ontap_commands }}"
       register: ontap_results
       ignore_errors: true
-      changed_when: false
-      no_log: false
-
-    - name: Run full SSH command output collection
-      ansible.builtin.shell: >
-        sshpass -e
-        ssh
-        -o StrictHostKeyChecking=no
-        -o UserKnownHostsFile=/dev/null
-        -o LogLevel=ERROR
-        {{ username }}@{{ hostname }}
-        "{{ item }}"
-      environment:
-        SSHPASS: "{{ password }}"
-      loop: "{{ ssh_commands }}"
-      register: ssh_results
-      ignore_errors: true
-      changed_when: false
+      changed_when: true
       no_log: false
 
     - name: Generate Web Style HTML Health Check Report
