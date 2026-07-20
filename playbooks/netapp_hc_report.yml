@@ -93,6 +93,12 @@
         command: "version"
         error_criteria:
           - "ONTAP version should match expected release"
+          
+      - tab: "SSH Command Output"
+        category: "Version"
+        command: "version -b"
+        error_criteria:
+          - "ONTAP version should match expected release"
 
   tasks:
 
